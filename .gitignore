@@ -1,9 +1,6 @@
 # Dataset
 data/
 
-# Trained models
-models/
-
 # Prediction history
 prediction_history.csv
 
