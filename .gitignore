@@ -1,0 +1,29 @@
+# Dataset
+data/
+
+# Trained models
+models/
+
+# Prediction history
+prediction_history.csv
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+.env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
