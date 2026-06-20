@@ -8,10 +8,75 @@ transformations are applied at both stages.
 
 import re
 import string
+import os
+import zipfile
 import numpy as np
 import scipy.sparse as sp
+import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
+
+# ---------------------------------------------------------------------------
+# NLTK data safeguard — Streamlit Cloud spins up a fresh container on every
+# deploy, so corpora aren't guaranteed to be present.
+#
+# nltk.download() returns False on failure instead of raising, so a naive
+# try/except LookupError: nltk.download(...) can silently fail (e.g. no
+# write permission on the default ~/nltk_data path, or restricted network
+# egress) and then crash on the very next line with the SAME LookupError,
+# uncaught. We check the return value and point at an explicit writable
+# directory to avoid that failure mode.
+# ---------------------------------------------------------------------------
+_NLTK_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".nltk_data")
+os.makedirs(_NLTK_DATA_DIR, exist_ok=True)
+if _NLTK_DATA_DIR not in nltk.data.path:
+    nltk.data.path.insert(0, _NLTK_DATA_DIR)
+
+
+def _ensure_nltk_resource(resource_path: str, package_name: str) -> None:
+    """
+    Download an NLTK resource if missing, and fail loudly if it doesn't work.
+
+    Handles a known NLTK quirk: the downloader sometimes leaves the data as
+    a .zip file without auto-extracting it, so nltk.data.find() still raises
+    LookupError even though the download "succeeded". We unzip manually as
+    a fallback before giving up.
+    """
+    try:
+        nltk.data.find(resource_path)
+        return
+    except LookupError:
+        pass
+
+    ok = nltk.download(package_name, download_dir=_NLTK_DATA_DIR, quiet=True)
+    if not ok:
+        raise RuntimeError(
+            f"Failed to download NLTK resource '{package_name}'. "
+            f"This usually means the deploy environment has no write access "
+            f"to '{_NLTK_DATA_DIR}' or restricted network egress. "
+            f"Check Streamlit Cloud's 'Manage app' logs for the underlying cause."
+        )
+
+    try:
+        nltk.data.find(resource_path)
+        return
+    except LookupError:
+        pass
+
+    # Fallback: NLTK sometimes downloads the .zip without extracting it.
+    zip_path = os.path.join(_NLTK_DATA_DIR, resource_path + ".zip")
+    if os.path.exists(zip_path):
+        extract_dir = os.path.dirname(os.path.join(_NLTK_DATA_DIR, resource_path))
+        with zipfile.ZipFile(zip_path) as zf:
+            zf.extractall(extract_dir)
+
+    # Final check — raises naturally if still missing, with NLTK's own
+    # detailed error message pointing at every search path it tried.
+    nltk.data.find(resource_path)
+
+
+_ensure_nltk_resource("corpora/stopwords", "stopwords")
+_ensure_nltk_resource("corpora/wordnet", "wordnet")
 
 # ---------------------------------------------------------------------------
 # Initialise once at import time (not inside the function — this is expensive)
