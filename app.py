@@ -362,7 +362,7 @@ def main():
 
             col_a, col_b = st.columns(2)
             col_a.metric("Accuracy",  f"{metrics.get('accuracy', 0):.1%}")
-            col_b.metric("ROC-AUC",   f"{metrics.get('roc_auc', 0):.3f}")
+            col_b.metric("ROC-AUC",   f"{metrics.get('roc_auc', 0):.4f}")
             col_a.metric("F1 (macro)", f"{metrics.get('f1_macro', 0):.1%}")
 
             cv_mean = metrics.get("cv_mean", 0)
